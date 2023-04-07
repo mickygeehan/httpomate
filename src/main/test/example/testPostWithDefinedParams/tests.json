@@ -1,0 +1,32 @@
+{
+    "tests": [
+      {
+        "name": "Testing POST with body using a userDefined var",
+        "description": "This will check that the height from GET response == 6",
+        "steps": [
+          {
+            "name": "Step1",
+            "description": "Create a POST",
+            "type": "HTTP",
+            "method": "POST",
+            "body": "$[./requests/create.json]",
+            "headers": "",
+            "url": "http://httpbin.org/post",
+            "onResponse": [
+              {
+                "code": 200,
+                "action": "saveResponse",
+                "runStep": ""
+              },
+              {
+                "code": 500,
+                "varsToSave": [
+                  "error"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }

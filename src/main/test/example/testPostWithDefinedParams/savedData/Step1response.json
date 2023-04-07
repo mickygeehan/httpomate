@@ -1,0 +1,23 @@
+{
+    "args": {},
+    "data": "{\"title\":\"title\",\"body\":\"My Test title\",\"userId\":7}",
+    "files": {},
+    "form": {},
+    "headers": {
+        "Accept": "*/*",
+        "Accept-Encoding": "gzip, deflate",
+        "Accept-Language": "en-US",
+        "Content-Length": "51",
+        "Content-Type": "text/plain;charset=UTF-8",
+        "Host": "httpbin.org",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) httpomate/1.0.0 Chrome/112.0.5615.49 Electron/24.0.0 Safari/537.36",
+        "X-Amzn-Trace-Id": "Root=1-6430093e-606daf54434331db55fa8234"
+    },
+    "json": {
+        "body": "My Test title",
+        "title": "title",
+        "userId": 7
+    },
+    "origin": "78.19.213.86",
+    "url": "http://httpbin.org/post"
+}

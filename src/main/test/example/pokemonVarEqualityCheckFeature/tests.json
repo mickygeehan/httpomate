@@ -1,0 +1,36 @@
+{
+    "tests": [
+      {
+        "name": "Pokemon Var equality test",
+        "description": "This will check that the height from GET response == 6",
+        "steps": [
+          {
+            "name": "Step1",
+            "description": "Get some pokemon",
+            "type": "HTTP",
+            "method": "GET",
+            "body": "",
+            "headers": "",
+            "url": "https://pokeapi.co/api/v2/pokemon/${pokemonName}",
+            "onResponse": [
+              {
+                "code": 200,
+                "action": "varEquality",
+                "runStep": "",
+                "varEquality": {
+                  "varPathToCheck": "height",
+                  "expectedValue": "6"
+                }
+              },
+              {
+                "code": 500,
+                "varsToSave": [
+                  "error"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }

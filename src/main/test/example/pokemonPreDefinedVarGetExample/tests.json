@@ -1,0 +1,32 @@
+{
+    "tests": [
+      {
+        "name": "Pokemon defined var test",
+        "description": "This test will run 2 steps. Get a pokemon name via GET request, then GET using saved param from step1.",
+        "steps": [
+          {
+            "name": "Step1",
+            "description": "Get some pokemon",
+            "type": "HTTP",
+            "method": "GET",
+            "body": "",
+            "headers": "$[./headers.json]",
+            "url": "https://pokeapi.co/api/v2/pokemon/${pokemonName}",
+            "onResponse": [
+              {
+                "code": 200,
+                "action": "saveResponse",
+                "runStep": ""
+              },
+              {
+                "code": 500,
+                "varsToSave": [
+                  "error"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }

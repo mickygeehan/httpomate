@@ -1,0 +1,19 @@
+{
+  "name": "httpomate",
+  "version": "0.0.1",
+  "description": "Automate your test suite",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Michael Geehan",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^24.0.0",
+    "electron-reloader": "^1.2.3"
+  },
+  "dependencies": {
+    "electron-prompt": "^1.7.0"
+  }
+}

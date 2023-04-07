@@ -1,0 +1,54 @@
+{
+    "tests": [
+      {
+        "name": "Chained pokemon data test",
+        "description": "This test will run 2 steps. Get a pokemon name via GET request, then GET using saved param from step1.",
+        "steps": [
+          {
+            "name": "Step1",
+            "description": "Get some pokemon",
+            "type": "HTTP",
+            "method": "GET",
+            "body": "",
+            "headers": "",
+            "url": "https://pokeapi.co/api/v2/pokemon",
+            "onResponse": [
+              {
+                "code": 200,
+                "varsToSave": [
+                  {
+                    "varNameToSave": "pokemonName",
+                    "varPath": "results[0].name"
+                  }
+                ],
+                "action": "saveResponse",
+                "runStep": "Step2"
+              },
+              {
+                "code": 500,
+                "varsToSave": [
+                  "error"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Step2",
+            "description": "GET details about the previous pokemon",
+            "type": "HTTP",
+            "method": "GET",
+            "body": "",
+            "headers": "",
+            "url": "https://pokeapi.co/api/v2/pokemon/${pokemonName}",
+            "onResponse": [
+              {
+                "code": 200,
+                "action": "saveResponse",
+                "runStep": ""
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
