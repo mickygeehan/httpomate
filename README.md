@@ -1,4 +1,5 @@
-# httpOmate
+
+![New Project (5)](https://user-images.githubusercontent.com/25685957/230743877-6434f94e-382f-446e-832e-2a2bbae7ce34.png)
 
 This app allows you to automate your http requests and chain them together, along with some other powerful features. This app is still in the works and not all validation is present.
 ## How it works
