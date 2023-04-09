@@ -220,6 +220,7 @@ The Step object is the main bulk of this project as it defines the http request 
 ### Issues
 - Not all file validation is there
 - Folder needs to be in a specified format
+- Needs a good refactoring
 - lots more I guess :D 
 
 ### Upcoming features
