@@ -1,21 +1,24 @@
 
-![New Project (5)](https://user-images.githubusercontent.com/25685957/230743877-6434f94e-382f-446e-832e-2a2bbae7ce34.png)
 
-This app allows you to automate your http requests and chain them together, along with some other powerful features. This app is still in the works and not all validation is present.
+<p align="center"><a target="_blank" rel="noopener noreferrer"><img width="400" src="https://user-images.githubusercontent.com/25685957/230743877-6434f94e-382f-446e-832e-2a2bbae7ce34.png" alt="httpOmate logo"></a></p>
+
+httpomate is a powerful developer~testing tool that allows you to easily automate/chain any http requests all through the power of one tests.json file. It is developed using the Electron framework.
+
+<br><br>
+
 ## How it works
 
-The main idea is to define one powerful json file - "tests.json" which will deal with http requests and how they chain together. 
-
-Basic Structure of tests.json (Full object details in Appdix):
+The main idea of this app is to easily chain http requests through one json file (tests.json). Here is the structure of the tests.json file (See [Appendix](#appendix) for full object details, required attributes etc.):
 ```bash
   {
-    "tests": [
+    "tests": [  // Contains a list of tests - Contains basic information
         {
-            "steps": [
+            "steps": [ // steps are the most powerful objects within this app.
                 {
-                    "onResponse": [
+                    "onResponse": [ // the onResponse objects tells the system how to deal with the respnse of the http request. onResponse works via the httpCode of the response
                         {
-                            "action": ""
+                            "action": "", // system defined actions on what to do with response
+                            "varsToSave": [] // system can save vars from the response to use in the following steps
                         }
                     ]
                 }
@@ -25,13 +28,20 @@ Basic Structure of tests.json (Full object details in Appdix):
     ]
   }
 ```
-- tests - Array of tests each defiing basic data.
-- steps - Each step can be a different http requests, defines the url, body etc.
-- onResponse - Defines how to deal with the response for that step, works via the httpCode.
-- actions - Actions are a part of onResponse and tell the system what to do with the response.
+- tests
+  - Contains a list of tests with basic information such as name description.
+  - Tests will run sequentially
+- steps 
+  - Each step can be a different http requests. The step defines the url, body, type etc.
+- onResponse 
+  - Each step has an onResponse object that can deal with the httpResponse. This works via the httpcode.
+  - Each onResponse has a runStep attribute that will run the next step via its name
+- action 
+  - Actions are a part of onResponse and tell the system what to do with the response. This can be a saveResponse to file or check a response attribute == a pre defined var
 
+For a full working example tests.json file please see some examples in the repo. These can be ran through the UI.
 
-
+<br>
 
 ## Installation
 
@@ -41,13 +51,16 @@ Basic Structure of tests.json (Full object details in Appdix):
   ~ npm run start
 ```
 
-Our simple UI should show. Simply select your tests.json file and click run. To run example tests.json navigate to /src/main/test/example
-
+After this our simple Electron UI will show (It's basic at the minute future features can be found below). It is recommended to run the example tests.json files found in the repo (src/main/tests). They are pre-working json files that will teach you the basics of how the app works.
     
+<br>
+
+
 ## Usage/Examples
 
-Steps are the most important piece of information. In the appendix you will see the whole object but here are some good examples:
+The Step object is the main bulk of this project as it defines the http request and what to do on response. Here are some of the main examples of how to chain requests and use variables between steps:
 
+<br>
 
 #### Save a variable from response of step1 and use it in step2:
 ```bash
@@ -86,6 +99,7 @@ Steps are the most important piece of information. In the appendix you will see 
 }
 ```
 
+<br>
 
 #### Reference an external json file in Step Object to use as body:
 - You can reference an external file to be used as the body for your http request. **Please note external files must be in the same folder location as your tests.json folder. Future improvements will fix this**
@@ -105,6 +119,8 @@ Steps are the most important piece of information. In the appendix you will see 
     }]
 }
 ```
+<br>
+
 #### Reference a pre-defined variable in an external body json file:
 - You can also pre-define variables to use across different requests. Just create a vars.json file in the same directory as the tests.json file. Any external / internal body can then reference these variables like so:
 ```bash
@@ -120,6 +136,8 @@ Steps are the most important piece of information. In the appendix you will see 
 }
 ```
 
+<br>
+
 #### Use predefined body functions:
 - Sometimes you just need a random string or integer in your request, you can get random strings and ints like so:
 ```bash
@@ -129,6 +147,8 @@ Steps are the most important piece of information. In the appendix you will see 
     "description": "{{$randomInteger}}"
 }
 ```
+
+<br>
 
 #### Check a variable from the response matches a given value:
 - Check a variable from the response is as you expect:
@@ -151,6 +171,8 @@ Steps are the most important piece of information. In the appendix you will see 
     }]
 }
 ```
+
+<br>
 
 #### Wait 3 seconds before running step, retry if response action failed 5 times:
 - Check a variable from the response is as you expect:
@@ -177,17 +199,46 @@ Steps are the most important piece of information. In the appendix you will see 
 }
 ```
 
+<br>
 
-### List of current actions:
-The below actions can be used in the step.onResponse[X].action field:
-- saveResponse: Saves the response as a file to the following directory: "./savedData/StepNameResponse.json"
-- varEquality: Checks that the response matches a pre defined variable defined in the VarEquality Object.
+### Full list of features:
+- Retry logic for requests.
+- Wait logic before sending request.
+- Read body / headers file from external .json files.
+- Reference pre-defined / saved variables in URL.
+- Reference pre-defined / saved variables in external json files.
+- Pre defined functions for randomString / randomIntegers.
+- Save responses to file.
+- Check response variables equal to expected values.
+- Deal with different responses.
+- Basic UI that wil show errors.
+
+<br>
+
+## Issues / Upcoming features
+
+### Issues
+- Not all file validation is there
+- Folder needs to be in a specified format
+- lots more I guess :D 
+
+### Upcoming features
+- More Actions
+- UI can create a tests.json file
+- lots more
+
+
+<br>
+
+
 ## Authors
 
-- [@mgeehan](https://www.github.com/)
+- [@mgeehan](https://github.com/mickygeehan)
 
+<br>
 
 ## Appendix
+(#appendix)
 
 Full test.json file object information can be found here.
 
