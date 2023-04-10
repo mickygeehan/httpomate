@@ -6,11 +6,14 @@ const ERROR_MESSAGES = {
     INVALID_STEP_TYPE: "Step type is invalid or null",
     MISSING_HTTP_STEP_REQUIREMENTS: "URL / method type is missing",
     STEP_METHOD_WRONG_TYPE: "Step method must be of type POST, GET, DELETE, PUT, PATCH",
-    USER_VAR_NOT_DEFINED: " is not defined in vars.json"
+    USER_VAR_NOT_DEFINED: " is not defined in vars.json",
+    FILE_NOT_FOUND: " is not found.",
+    HEADERS_FILE_NOT_VALID_MAP: "headers.json cannot be parsed to a map, please check your json"
 }
 
 const CONSTANTS = {
     TESTS_JSON: "tests.json",
+    HEADERS_JSON_FILE: "headers.json",
     USER_DEFINED_VARS_FILE: "vars.json",
     FAILED: "FAILED",
     PASSED: "PASSED",
