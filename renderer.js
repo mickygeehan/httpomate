@@ -1,55 +1,41 @@
 import { start } from './src/main/httpomate/brain.js';
-const fileInput = document.getElementById('file');
-
+import { ERROR_MESSAGES, CONSTANTS } from './src/main/httpomate/constants.js';
 let latestResults = []
-
-document.getElementById('run-tests').addEventListener('click', () => {
-
-  // Get the selected file
-  const testFile = fileInput.files[0];
-  if (testFile.name === "tests.json") {
-    start(testFile)
-  } else {
-    console.log('Test file must be called: tests.json')
-    alert('Test file must be called: tests.json')
-  }
-
-  //   // Create a new FileReader object
-  //   const reader = new FileReader();
-
-  //     // Get the selected file
-  //     // Get the file name
-  //     const fileName = file.name;
-
-  //     // Log the file name to the console
-  //     console.log('File name:', file);
-
-  //   reader.addEventListener('load', () => {
-  //     // Get the file contents as text
-  //     const fileContents = reader.result;
-
-  //     // Do something with the file contents (e.g. run tests)
-  //     console.log('File contents:', fileContents);
-
-  //     console.log(reader)
-  //   });
-
-  //   // Read the selected file as text
-  //   reader.readAsText(file);
-  // start()
-})
-
 var testDropdown = document.getElementById("testDropdown");
 var testTable = document.getElementById("testTable");
+
+function validateInitialTestsFile(file) {
+  if(file) {
+    if (file.name !== CONSTANTS.TESTS_JSON) {
+      alert(ERROR_MESSAGES.TESTS_FILE_WRONG_NAME)
+      return false
+    } else {
+      return true
+    }
+  } else {
+    alert(ERROR_MESSAGES.TESTS_FILE_REQUIRED)
+  }
+}
+
+function getUserInputtedFile() {
+  return document.getElementById('file').files[0];
+}
+
+document.getElementById('run-tests').addEventListener('click', async () => {
+  let userFile = getUserInputtedFile()
+  if (validateInitialTestsFile(userFile)) {
+    await start(userFile).then((testResults) => {
+      updateView(testResults);
+    })
+  }
+})
 
 function clearTestDropdown() {
   const dropdown = document.getElementById('testDropdown');
   dropdown.innerHTML = '';
 }
 
-
 function updateView(results) {
-  console.log(results)
   latestResults = results
 
   clearTestDropdown()
@@ -65,9 +51,7 @@ function updateView(results) {
 }
 
 testDropdown.addEventListener("change", function() {
-
   updateStepTable()
-  
 });
 
 function updateStepTable() {
@@ -94,6 +78,5 @@ function updateStepTable() {
     }
   }
 }
-
 
 export { updateView }

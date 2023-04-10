@@ -1,8 +1,6 @@
 import { runSteps } from './stepRunner.js';
 
 /**
-*
-
 Runs each test in the given tests list.
 @param {Array} tests
 @param {Object} userDefinedVars
@@ -17,9 +15,8 @@ async function runTests(tests, userDefinedVars, testFolder) {
     }
     return testResults;
 }
-/**
-*
 
+/**
 Run the given individual test. Kicks off the StepRunner
 @param {Object} test
 @param {Object} userDefinedVars
@@ -35,4 +32,5 @@ async function runTest(test, userDefinedVars, testFolder) {
         stepResults
     };
 }
+
 export { runTests };

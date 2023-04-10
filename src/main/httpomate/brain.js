@@ -1,7 +1,8 @@
 import { readFile, checkFileExists } from './fileUtil.js';
 import { isJsonString } from './formatter.js';
 import { runTests } from './testRunner.js';
-import { updateView } from '../../../renderer.js';
+import { ERROR_MESSAGES, CONSTANTS } from './constants.js';
+
 
 /**
  * Starts the main initializer.
@@ -9,8 +10,7 @@ import { updateView } from '../../../renderer.js';
  * @returns {Promise<void>}
  */
 async function start(testFile) {
-  const results = await initializer(testFile);
-  updateView(results);
+  return await initializer(testFile);
 }
 
 /**
@@ -20,32 +20,33 @@ async function start(testFile) {
  */
 async function initializer(testFile) {
   const testFilePath = testFile.path;
-  const testFolder = testFilePath.substring(0, testFilePath.indexOf('tests.json'));
+  const testFolder = testFilePath.substring(0, testFilePath.indexOf(CONSTANTS.TESTS_JSON));
   const testsFileExists = await checkFileExists(testFilePath);
   
   if (!testsFileExists) {
-    throw new Error('Tests file cannot be found');
+    throw new Error(ERROR_MESSAGES.TESTS_FILE_NOT_FOUND);
   }
   
   const testsFileResponse = await readFile(testFilePath);
   
   if (!isJsonString(testsFileResponse)) {
-    throw new Error('Tests file contains invalid JSON');
+    throw new Error(CONSTANTS.TESTS_JSON + ERROR_MESSAGES.INVALID_JSON);
   }
   
   const finalValidatedTests = JSON.parse(testsFileResponse).tests;
-
-  // User defined vars
+  const userDefinedVarsFile = testFolder + CONSTANTS.USER_DEFINED_VARS_FILE
   let userDefinedVars = new Map();
-  const userDefinedVarsExist = await checkFileExists(`${testFolder}vars.json`);
-  
+  const userDefinedVarsExist = await checkFileExists(userDefinedVarsFile);
+
   if (userDefinedVarsExist) {
-    const userDefinedVarsResponse = await readFile(`${testFolder}vars.json`);
+    const userDefinedVarsResponse = await readFile(userDefinedVarsFile);
     if (isJsonString(userDefinedVarsResponse)) {
       userDefinedVars = new Map(Object.entries(JSON.parse(userDefinedVarsResponse)));
+    } else {
+      alert(CONSTANTS.USER_DEFINED_VARS_FILE + ERROR_MESSAGES.INVALID_JSON)
+      return
     }
   }
-
   return await runTests(finalValidatedTests, userDefinedVars, testFolder);
 }
 

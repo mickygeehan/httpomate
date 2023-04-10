@@ -5,6 +5,14 @@ import { isJsonString } from './formatter.js';
 import { createBasicStepResponse } from './stepResonse.js';
 import { CustomException } from './exception.js';
 
+/**
+ * Runs the current HTTP step
+ * @param {*} currentStep 
+ * @param {*} userDefinedVariables 
+ * @param {*} testFolder 
+ * @param {*} stepResults 
+ * @returns stepResult {}
+ */
 async function runHttpStep(currentStep, userDefinedVariables, testFolder, stepResults) {
     const stepResult = createBasicStepResponse(currentStep.name);
     let nextStep = ""

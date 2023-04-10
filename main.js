@@ -6,7 +6,6 @@ const fs = require('fs');
 require('electron-reloader')(module, {ignore: ['./src/main/test']})
 
 async function handlePrompt(request, req) {
-    console.log(req)
     return electronPrompt({
         title: 'Prompt example',
         label: 'URL:'    })
