@@ -67,7 +67,7 @@ function updateStepTable() {
         if(!stepResults[i].error) {
           stepResults[i].error = ""
         }
-        if(stepResults[i].result === "Pass") {
+        if(stepResults[i].result === CONSTANTS.PASSED) {
           tableHTML += "<tr style='border-bottom: 1px solid #ddd;'><td style='text-align: left;padding: 8px;'>"+stepResults[i].name+"</td><td style='text-align: left;padding: 8px;background-color: #4CAF50;'>"+stepResults[i].result+"</td><td style='text-align: left;padding: 8px;'>"+stepResults[i].actionName+"</td><td style='text-align: left;padding: 8px;'>"+stepResults[i].actionMessage+"</td><td style='text-align: left;padding: 8px;'>"+stepResults[i].error+"</td></tr>";
         } else {
           tableHTML += "<tr style='border-bottom: 1px solid #ddd;'><td style='text-align: left;padding: 8px;'>"+stepResults[i].name+"</td><td style='text-align: left;padding: 8px;background-color: #ff0000;'>"+stepResults[i].result+"</td><td style='text-align: left;padding: 8px;'>"+stepResults[i].error+"</td><td style='text-align: left;padding: 8px;'>"+stepResults[i].actionMessage+"</td><td style='text-align: left;padding: 8px;'>"+stepResults[i].error+"</td></tr>";

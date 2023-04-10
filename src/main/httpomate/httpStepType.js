@@ -1,9 +1,10 @@
-import { readFile, writeJsonToFile } from './fileUtil.js';
+import { checkFileExists, readFile, writeJsonToFile } from './fileUtil.js';
 import { sendRequest } from './httpUtils.js';
 import { wait } from './thread.js';
 import { isJsonString } from './formatter.js';
 import { createBasicStepResponse } from './stepResonse.js';
 import { CustomException } from './exception.js';
+import { ERROR_MESSAGES, CONSTANTS } from './constants.js';
 
 /**
  * Runs the current HTTP step
@@ -25,55 +26,27 @@ async function runHttpStep(currentStep, userDefinedVariables, testFolder, stepRe
         const httpResponse = await sendRequest(stepUrl, currentStep.method, stepBody, headers);
         const responseBody = await httpResponse.json();
         const nextStep = await processResponse(httpResponse, currentStep, responseBody, userDefinedVariables, testFolder, stepResult);
-        stepResult.result = "Pass";
+        stepResult.result = CONSTANTS.PASSED;
         stepResults.push(stepResult);
         return nextStep;
     } catch(error) {
-        stepResult.result = "Fail"
+        stepResult.result = CONSTANTS.FAILED
         stepResult.error = error.message
     }
     stepResults.push(stepResult)
     return nextStep
-  }
-  
-
-async function extractBody(httpMethod, userBody, userDefinedVariables, testFolder) {
-    let body = isBodyExternalFile(userBody) ? await readFile(testFolder+extractFileNameFromStepBody(userBody)) : userBody
-    if(bodyContainsUserDefinedParams(body)) {
-        if(isJsonString(body)) {
-            return JSON.stringify(subUserParamsWithValues(body, userDefinedVariables));
-        } else {
-            throw new CustomException("Body is not a Json string")
-        }
-    }
-    return body
-}  
+}
 
 /**
- *
- * @param stepBody
- * @returns {Promise<string|*>}
+ * Extracts the url from the field. Subs in pre defined params
+ * @param {*} url 
+ * @param {*} userDefinedVariables 
+ * @returns url
  */
- async function validateExtractBody(stepBody, userDefinedVariables, testFolder, stepResult) {
-    let body = isBodyExternalFile(stepBody) ? await readFile(testFolder+extractFileNameFromStepBody(stepBody)) : stepBody
-    if(bodyContainsUserDefinedParams(body)) {
-        return JSON.stringify(subUserParamsWithValues(body, userDefinedVariables));
-    }
-    return body
-}
-
-function validateStep(step) {
-    if(!stepHasRequiredAttributes(step)) {
-        throw new CustomException('URL / method is missing')
-    } else if(!isValidMethod(step.method)) {
-        throw new CustomException('Method is not of type POST, GET etc.')
-    }
-}
-
 function extractUrl(url, userDefinedVariables) {
     if(urlContainsDefinedVariable(url)) {
-        const foundDefinedParamsInUrl = getUserDefinedVariablesInString(url, /{([^}]+)}/g)
-        foundDefinedParamsInUrl.forEach((userVar) => {
+        const listOfDefinedVariables = getUserDefinedVariablesInString(url, /{([^}]+)}/g)
+        listOfDefinedVariables.forEach((userVar) => {
             var startOfVar = url.indexOf(userVar)-2
             var endOfVar = startOfVar + userVar.length+3
             var startUrl = url.substring(0, startOfVar)
@@ -81,15 +54,43 @@ function extractUrl(url, userDefinedVariables) {
             if(userDefinedVariables.has(userVar)) {
                 url = startUrl+userDefinedVariables.get(userVar)+endUrl
             } else {
-                throw new CustomException(userVar + " is not defined in vars,json")
+                throw new CustomException(userVar + ERROR_MESSAGES.USER_VAR_NOT_DEFINED)
             }
         })
     }
     return url
 }
 
+/**
+ * Extracts the body, can be within a file or within the text string
+ * @param {*} httpMethod 
+ * @param {*} userBody 
+ * @param {*} userDefinedVariables 
+ * @param {*} testFolder 
+ * @returns body
+ */
+async function extractBody(httpMethod, userBody, userDefinedVariables, testFolder) {
+    let body = isBodyExternalFile(userBody) ? await readFile(testFolder+extractFileNameFromStepBody(userBody)) : userBody
+    if(bodyContainsUserDefinedParams(body)) {
+        if(isJsonString(body)) {
+            return JSON.stringify(subUserParamsWithValues(body, userDefinedVariables));
+        } else {
+            throw new CustomException("Body" + ERROR_MESSAGES.INVALID_JSON)
+        }
+    }
+    return body
+}  
+
+function validateStep(step) {
+    if(!stepHasRequiredAttributes(step)) {
+        throw new CustomException(ERROR_MESSAGES.MISSING_HTTP_STEP_REQUIREMENTS)
+    } else if(!isValidMethod(step.method)) {
+        throw new CustomException(ERROR_MESSAGES.STEP_METHOD_WRONG_TYPE)
+    }
+}
+
 function urlContainsDefinedVariable(url) {
-    return url.includes('${')
+    return url.includes(CONSTANTS.URL_VARIABLE_PREFIX)
 }
 
 /**
@@ -106,38 +107,6 @@ function getUserDefinedVariablesInString(textToSearch, regex) {
     return varsFound
 }
 
-/**
- * Needs to be refactored only works with 1
- *
- * @param stepUrl
- * @returns {Promise<void>}
- */
- function validateExtractUrl(stepUrl, userDefinedVariables) {
-    if(stepUrl.includes('${')) {
-        let found = [],
-            regex = /{([^}]+)}/g,
-            curMatch;
-
-        while(curMatch = regex.exec(stepUrl)) {
-            found.push(curMatch[1])
-        }
-
-        found.forEach((userVar) => {
-            var start = stepUrl.indexOf(userVar)-2
-            var end = start + (userVar.length+3)
-            var newURL = stepUrl.substring(0, start)
-            var last = stepUrl.substring(end, stepUrl.length)
-            
-            if(userDefinedVariables.has(userVar)) {
-                stepUrl = newURL+userDefinedVariables.get(found[0])+last
-            } else {
-                stepUrl = ""
-            }
-        })
-    }
-    return stepUrl
-}
-
 function stepHasRequiredAttributes(currentStep) {
     return currentStep.method && currentStep.url
 }
@@ -146,7 +115,7 @@ function isValidMethod(method) {
     return method === "POST" || method === "GET" || method === "PUT" || method === "PATCH" || method === "DELETE"
 }
 
-async function getHeadersMap (headersFromStep, testFolder, stepResult) {
+async function getHeadersMap(headersFromStep, testFolder, stepResult) {
     let headers = new Map()
     if(!headersFromStep) {
         return headers
@@ -154,20 +123,17 @@ async function getHeadersMap (headersFromStep, testFolder, stepResult) {
 
     if(isBodyExternalFile(headersFromStep)) {
         var headersFile = extractFileNameFromStepBody(headersFromStep)
-        headers = await readFile(testFolder + headersFile)
-        if(headers === "ERROR") {
-            stepResult.result = "Fail"
-            stepResult.error = "Cannot read the headers file"
-            return
-        } 
+        if(checkFileExists(headersFile)) {
+            headers = await readFile(testFolder + headersFile)
+        } else {
+            throw new CustomException(CONSTANTS.HEADERS_JSON_FILE + ERROR_MESSAGES.FILE_NOT_FOUND)
+        }
     }
 
     if(isJsonString(headers)) {
         headers = new Map(Object.entries(await JSON.parse(headers)));
     } else {
-        stepResult.result = "Fail"
-        stepResult.error = "Headers is not a valid JSON string"
-        return
+        throw new CustomException(ERROR_MESSAGES.HEADERS_FILE_NOT_VALID_MAP)
     }
 
     return headers
@@ -185,7 +151,6 @@ async function checkPreParams(step) {
         await wait(step.timeToWait)
     }
 }
-
 
 /**
  *
@@ -323,7 +288,6 @@ function subUserParamsWithValues(body, userDefinedVariables) {
     return getObjects(bodyJson, userDefinedVariables)
 }
 
-
 function getObjects(obj, userDefinedVariables, stepResult) {
     let objects = [];
     for (var i in obj) {
@@ -333,8 +297,8 @@ function getObjects(obj, userDefinedVariables, stepResult) {
         } else {
             if(obj[i]) {
                 if (typeof obj[i] === 'string') {
-                    if(obj[i].includes('{{$')) {
-                        const startIdx = obj[i].indexOf('{{$')
+                    if(obj[i].includes(CONSTANTS.REFERENCED_VARIABLE_PREFIX)) {
+                        const startIdx = obj[i].indexOf(CONSTANTS.REFERENCED_VARIABLE_PREFIX)
                         const endIndx = obj[i].indexOf('}}')
                         const beforeStr = obj[i].substring(0, startIdx)
                         const endStr = obj[i].substring(endIndx+2, obj[i].length)
@@ -350,9 +314,7 @@ function getObjects(obj, userDefinedVariables, stepResult) {
                                     obj[i] = beforeStr + userDefinedVariables.get(userVarToFind) + endStr
                                 }
                             } else {
-                                stepResult.error = userVarToFind + "defined in body has not been defined in vars.json"
-                                stepResult.result = "Fail"
-                                return ""
+                                throw new CustomException(userVarToFind + ERROR_MESSAGES.USER_VAR_NOT_DEFINED)
                             }
                         }
                     }
@@ -364,11 +326,11 @@ function getObjects(obj, userDefinedVariables, stepResult) {
 }
 
 function isPreDefinedLogicVar(userVar) {
-    return userVar === "randomString" || userVar === "randomInteger"
+    return userVar === CONSTANTS.RANDOM_STRING_FUNCTION || userVar === CONSTANTS.RANDOM_INTEGER_FUNCTION
 }
 
 function predefinedLogic(userVar) {
-    if(userVar === "randomString") {
+    if(userVar === CONSTANTS.RANDOM_STRING_FUNCTION) {
         return randomString(8)
     } else {
         return Math.random().toFixed(6).split('.')[1];
@@ -387,7 +349,7 @@ function randomString(len, charSet) {
 
 
 function bodyContainsUserDefinedParams(body) {
-    return body.includes('{{$')
+    return body.includes(CONSTANTS.REFERENCED_VARIABLE_PREFIX)
 }
 
 /**
@@ -397,7 +359,7 @@ function bodyContainsUserDefinedParams(body) {
  * @returns {boolean}
  */
 function isBodyExternalFile(body) {
-    return body.startsWith("$[")
+    return body.startsWith(CONSTANTS.EXTERNAL_FILE_PREFIX)
 }
 
 /**
