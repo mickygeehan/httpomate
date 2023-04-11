@@ -4,38 +4,26 @@ let latestResults = []
 var testDropdown = document.getElementById("testDropdown");
 var testTable = document.getElementById("testTable");
 
-function validateInitialTestsFile(file) {
-  if(file) {
-    if (file.name !== CONSTANTS.TESTS_JSON) {
-      alert(ERROR_MESSAGES.TESTS_FILE_WRONG_NAME)
-      return false
-    } else {
-      return true
-    }
-  } else {
-    alert(ERROR_MESSAGES.TESTS_FILE_REQUIRED)
-  }
-}
-
-function getUserInputtedFile() {
-  return document.getElementById('file').files[0];
-}
-
 document.getElementById('run-tests').addEventListener('click', async () => {
   let userFile = getUserInputtedFile()
   if (validateInitialTestsFile(userFile)) {
     await start(userFile).then((testResults) => {
-      updateView(testResults);
+      updateViewWithResults(testResults);
     })
   }
 })
+
+testDropdown.addEventListener("change", function() {
+  updateStepTable()
+});
+
 
 function clearTestDropdown() {
   const dropdown = document.getElementById('testDropdown');
   dropdown.innerHTML = '';
 }
 
-function updateView(results) {
+function updateViewWithResults(results) {
   latestResults = results
 
   clearTestDropdown()
@@ -49,10 +37,6 @@ function updateView(results) {
 
   updateStepTable()
 }
-
-testDropdown.addEventListener("change", function() {
-  updateStepTable()
-});
 
 function updateStepTable() {
   var selectedTest = testDropdown.value;
@@ -79,4 +63,19 @@ function updateStepTable() {
   }
 }
 
-export { updateView }
+function validateInitialTestsFile(file) {
+  if(file) {
+    if (file.name !== CONSTANTS.TESTS_JSON) {
+      alert(ERROR_MESSAGES.TESTS_FILE_WRONG_NAME)
+      return false
+    } else {
+      return true
+    }
+  } else {
+    alert(ERROR_MESSAGES.TESTS_FILE_REQUIRED)
+  }
+}
+
+function getUserInputtedFile() {
+  return document.getElementById('file').files[0];
+}

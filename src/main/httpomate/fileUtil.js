@@ -14,7 +14,7 @@ async function writeJsonToFile(fileName, jsonData) {
   await window.fileWriter.fs({
     name: fileName,
     data: prettyJsonData(jsonData),
-  });
+  }).then((res) => {return res});
 }
 
 /**

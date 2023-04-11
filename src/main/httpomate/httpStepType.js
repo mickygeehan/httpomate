@@ -4,7 +4,7 @@ import { wait } from './thread.js';
 import { isJsonString } from './formatter.js';
 import { createBasicStepResponse } from './stepResonse.js';
 import { CustomException } from './exception.js';
-import { ERROR_MESSAGES, CONSTANTS } from './constants.js';
+import { ERROR_MESSAGES, CONSTANTS, STEP_ACTIONS, SUPPORTED_HTTP_METHODS } from './constants.js';
 
 /**
  * Runs the current HTTP step
@@ -112,7 +112,7 @@ function stepHasRequiredAttributes(currentStep) {
 }
 
 function isValidMethod(method) {
-    return method === "POST" || method === "GET" || method === "PUT" || method === "PATCH" || method === "DELETE"
+    return SUPPORTED_HTTP_METHODS.includes(method)
 }
 
 async function getHeadersMap(headersFromStep, testFolder, stepResult) {
@@ -123,7 +123,7 @@ async function getHeadersMap(headersFromStep, testFolder, stepResult) {
 
     if(isBodyExternalFile(headersFromStep)) {
         var headersFile = extractFileNameFromStepBody(headersFromStep)
-        if(checkFileExists(headersFile)) {
+        if(checkFileExists(testFolder + headersFile)) {
             headers = await readFile(testFolder + headersFile)
         } else {
             throw new CustomException(CONSTANTS.HEADERS_JSON_FILE + ERROR_MESSAGES.FILE_NOT_FOUND)
@@ -163,43 +163,34 @@ async function checkPreParams(step) {
  * @returns {Promise<string>}
  */
 async function processResponse(response, step, jsonResponse, userDefinedVariables, testFolder, stepResult) {
-    const userDefinedResponse = getUserDefinedResponse(response.status, step.onResponse)
-    
-    //Save vars
-    if(userDefinedResponse.varsToSave) {
-        const userDefinedVarsToSave = userDefinedResponse.varsToSave
-        const savedVars = await extractAndSaveUserDefinedVars(userDefinedVarsToSave, jsonResponse, userDefinedVariables)
+    const userDefinedResponseProcessor = getUserDefinedResponse(response.status, step.onResponse)
+    let nextStep = userDefinedResponseProcessor.runStep
+    const stepAction = userDefinedResponseProcessor.action
+    let stepActionCompleted = true
+
+    if(userDefinedResponseProcessor.varsToSave) {
+        const savedVars = await extractAndSaveUserDefinedVars(userDefinedResponseProcessor.varsToSave, jsonResponse, userDefinedVariables)
         stepResult.savedVars = savedVars
     }
 
-    //find action
-    const stepAction = userDefinedResponse.action
-    const nextStep = userDefinedResponse.runStep
-    let actionCompleted = true
-
     if(stepAction) {
-        actionCompleted = await runAction(stepAction, jsonResponse, userDefinedVariables, step, userDefinedResponse, testFolder, stepResult)
-    }
-
-    if(!actionCompleted) {
-        if(step.retry) {
-            if(!userDefinedVariables.has(step.name+"retry")) {
-                userDefinedVariables.set(step.name+"retry", step.retryAttempts)
+        stepActionCompleted = await runAction(stepAction, jsonResponse, userDefinedVariables, step, userDefinedResponseProcessor, testFolder, stepResult)
+        if(!stepActionCompleted) {
+            if(step.retry) {
+                if(!userDefinedVariables.has(step.name+CONSTANTS.RETRY)) {
+                    userDefinedVariables.set(step.name+CONSTANTS.RETRY, step.retryAttempts)
+                }
+                if(userDefinedVariables.get(step.name + CONSTANTS.RETRY) > 0) {
+                    userDefinedVariables.set(step.name+CONSTANTS.RETRY, userDefinedVariables.get(step.name+CONSTANTS.RETRY)-1)
+                    return step.name
+                } else {
+                    throw new CustomException(ERROR_MESSAGES.ACTION_FAILED_WITH_RETRY)
+                }
             }
-            if(userDefinedVariables.get(step.name + "retry") > 0) {
-                userDefinedVariables.set(step.name+"retry", userDefinedVariables.get(step.name+"retry")-1)
-                return step.name
-            } else {
-                throw new CustomException('Action with retry failed')
-                return ""
-            }
+            throw new CustomException(ERROR_MESSAGES.ACTION_FAILED)
         }
-        throw new CustomException('Action failed')
-        console.log('Action failed')
-    } else {
-        await writeJsonToFile(testFolder + 'savedSystemVars.json', JSON.stringify(Object.fromEntries(userDefinedVariables)))
-        return nextStep
     }
+    return nextStep
 }
 
 /**
@@ -214,25 +205,63 @@ function getUserDefinedResponse(responseStatusCode, userDefinedResponses) {
 
 async function runAction(stepAction, jsonResponse, userDefinedVariables, step, stepResponse, testFolder, stepResult) {
     stepResult.actionName = stepAction
-    if(stepAction === "saveResponse") {
-        const fileName = testFolder + "savedData/" + step.name + "response.json"
-        await writeJsonToFile(fileName, JSON.stringify(jsonResponse))
-        stepResult.actionMessage="Saved data here: " + fileName
-        return true
-    } else if(stepAction === "varEquality") {
-        return await checkVarEquality(jsonResponse, stepResponse, step, userDefinedVariables, stepResult)
+    if(STEP_ACTIONS.ALL_ACTIONS.includes(stepAction)) {
+        if(stepAction === STEP_ACTIONS.SAVE_RESPONSE) {
+            return await runSaveResponseAction(jsonResponse, testFolder, step.name, stepResult)
+        } else {
+            console.log('ss')
+            return await runVarEqualityAction(jsonResponse, stepResponse, stepResult)
+        }
+    } else {
+        throw new CustomException(ERROR_MESSAGES.UNSUPPORTED_ACTION)
     }
 }
 
-async function checkVarEquality(jsonResponse, stepResponse, step, userDefinedVariables, stepResult) {
-    const userDefinedEquality = stepResponse.varEquality
-    const httpResponseValueForVar = await userDefinedNestedVar(userDefinedEquality.varPathToCheck, jsonResponse)
-    var equal = httpResponseValueForVar == userDefinedEquality.expectedValue;
+async function runSaveResponseAction(responseToSave, testFolder, stepName, stepResult) {
+    const fileToSave = testFolder + "savedData/" + stepName + "response.json"
+    try {
+        await writeJsonToFile(fileToSave, JSON.stringify(responseToSave))
+        stepResult.actionMessage="Saved data here: " + fileToSave
+        return true
+    } catch(error) {
+        stepResult.actionMessage="Error saving data: " + fileToSave
+        return false
+    }
+}
 
-    equal ? stepResult.actionMessage = "Response value: "+ httpResponseValueForVar + " matches: " + userDefinedEquality.expectedValue :
-            stepResult.actionMessage = "Response value: "+ httpResponseValueForVar + " does not match " + userDefinedEquality.expectedValue 
+async function runVarEqualityAction(jsonResponse, stepResponse, stepResult) {
+    const userDefinedEqualityObject = stepResponse.varEquality
+    const httpResponseValueForVar = getUserDefinedParamInResponse(userDefinedEqualityObject.varPathToCheck, jsonResponse)
+    var varsAreEqual = httpResponseValueForVar == userDefinedEqualityObject.expectedValue;
 
-    return equal
+    varsAreEqual ? stepResult.actionMessage = "Response value: "+ httpResponseValueForVar + " matches: " + userDefinedEqualityObject.expectedValue :
+            stepResult.actionMessage = "Response value: "+ httpResponseValueForVar + " does not match " + userDefinedEqualityObject.expectedValue 
+
+    return varsAreEqual
+}
+
+function getUserDefinedParamInResponse(definedParam, responseToSearch) {
+    if(definedParam.includes('.')) {
+        const pathToParam = definedParam.split('.')
+        let currentJsonObject = responseToSearch
+        pathToParam.forEach((key) => {
+            if(key.includes('[')) {
+                var arrayIndex = getArrayIndexFromDefinedParameter(key)
+                var userDefinedVarName = key.substring(0, key.indexOf('['))
+                currentJsonObject = currentJsonObject[userDefinedVarName][arrayIndex]
+            } else {
+                currentJsonObject = currentJsonObject[key]
+            }
+        })
+        return currentJsonObject
+    } else {
+        return responseToSearch[definedParam]
+    }
+
+}
+
+function getArrayIndexFromDefinedParameter(userDefinedArrayParam) {
+    return userDefinedArrayParam.substring(userDefinedArrayParam.indexOf('[')+1, userDefinedArrayParam.indexOf(']'))
 }
 
 async function extractAndSaveUserDefinedVars(varsToSave, jsonResponse, userDefinedVariables) {
@@ -243,7 +272,7 @@ async function extractAndSaveUserDefinedVars(varsToSave, jsonResponse, userDefin
         let varValue = ""
 
         if(path.includes('.')) {
-            varValue = userDefinedNestedVar(path, jsonResponse)
+            varValue = getUserDefinedParamInResponse(path, jsonResponse)
         } else {
             varValue = jsonResponse[path]
         }
@@ -254,33 +283,6 @@ async function extractAndSaveUserDefinedVars(varsToSave, jsonResponse, userDefin
     objToSave += "}"
 
     return objToSave
-}
-
-function userDefinedNestedVar(userDefined, json) {
-
-    if(userDefined.includes('.')) {
-        const u = userDefined.substring(0, userDefined.indexOf('.'))
-        
-        // means its an array and to find int number
-        if(u.includes('[')) {
-            var num = u.substring(u.indexOf('[')+1, u.indexOf(']'))
-            var userParam = u.substring(0, u.indexOf('['))
-            var sendBack = u.substring(u.indexOf(']'), u.length)
-            json = json[userParam][num]
-            var nameToSend = userDefined.substring(userDefined.indexOf('.')+1, userDefined.length)
-            return userDefinedNestedVar(nameToSend,json)
-            
-
-        } else {
-            const sendBack = userDefined.substring(userDefined.indexOf('.')+1, userDefined.length)
-            json = json[u]
-            return userDefinedNestedVar(sendBack, json)
-        }
-    }
-
-    if(userDefined) {
-        return json[userDefined]
-    }
 }
 
 function subUserParamsWithValues(body, userDefinedVariables) {
@@ -346,7 +348,6 @@ function randomString(len, charSet) {
     }
     return randomString;
 }
-
 
 function bodyContainsUserDefinedParams(body) {
     return body.includes(CONSTANTS.REFERENCED_VARIABLE_PREFIX)
