@@ -18,8 +18,8 @@
                 "action": "varEquality",
                 "runStep": "",
                 "varEquality": {
-                  "varPathToCheck": "height",
-                  "expectedValue": "6"
+                  "varPathToCheck": "game_indices[0].version.name",
+                  "expectedValue": "red"
                 }
               },
               {
